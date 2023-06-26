@@ -10,6 +10,8 @@ import torch
 from torchvision import datasets, transforms
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
+
 from util import TwoCropTransform
 from model import Encoder, SupCon, SupConLoss
 
@@ -54,7 +56,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.999), ep
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.9)
 
 log = []
-for epoch in range(1, num_epochs+1):
+for epoch in tqdm(range(1, num_epochs+1)):
     model.train()
     train_loss = 0
     for batch_idx, (data,labels) in enumerate(contrastive_loader):
@@ -69,8 +71,10 @@ for epoch in range(1, num_epochs+1):
         loss = criterion(features)
         optimizer.zero_grad()
         loss.backward()
+        optimizer.step()
         train_loss += loss.item()
     scheduler.step()
+    print(train_loss / len(contrastive_loader))
     log.append(train_loss / len(contrastive_loader))
 
 plt.plot(range(1,len(log)+1),log, color='b', label = 'loss')
