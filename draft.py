@@ -59,12 +59,15 @@ log = []
 for epoch in tqdm(range(1, num_epochs+1)):
     model.train()
     train_loss = 0
-    for batch_idx, (data,labels) in enumerate(contrastive_loader):
+    for batch_idx, (data, _) in enumerate(contrastive_loader):
         data = torch.cat([data[0], data[1]], dim=0)
+        bsz = data.shape[0] // 2
         if torch.cuda.is_available():
-            data,labels = data.cuda(), labels.cuda()
-        data, labels = torch.autograd.Variable(data,False), torch.autograd.Variable(labels)
-        bsz = labels.shape[0]
+            # data,labels = data.cuda(), labels.cuda()
+            data = data.cuda()
+        # data, labels = torch.autograd.Variable(data,False), torch.autograd.Variable(labels)
+        data = torch.autograd.Variable(data,False)
+        # bsz = labels.shape[0]
         features = model(data)
         f1, f2 = torch.split(features, [bsz, bsz], dim=0)
         features = torch.cat([f1.unsqueeze(1), f2.unsqueeze(1)], dim=1)
@@ -79,3 +82,9 @@ for epoch in tqdm(range(1, num_epochs+1)):
 
 plt.plot(range(1,len(log)+1),log, color='b', label = 'loss')
 plt.legend(), plt.ylabel('loss'), plt.xlabel('epochs'), plt.title('Loss'), plt.savefig('output/plot2.png'), plt.close()
+
+torch.save({
+    'model': model.state_dict(), 
+    'optimizer': optimizer.state_dict(), 
+    'epoch': epoch,
+  }, 'output/model.pth.tar')
