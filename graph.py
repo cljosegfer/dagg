@@ -17,7 +17,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 # Function to compute the Gabriel Graph using PyTorch
-def GabrielGraph(X):
+def GabrielGraph(data):
     # This function computes the Gabriel Graph of an input data.
     #
     # It first calculates the squared distance array(SDA) containing the squared euclidean distance
@@ -25,18 +25,18 @@ def GabrielGraph(X):
     #
     # Then it returns the graph, or array of adjacency.
 
-    data = torch.tensor(X, dtype=torch.float64).cuda()
+    data = torch.tensor(data).cuda()
     n = data.size(0)
     fourth_power_distance_array = torch.zeros((n, n), dtype=torch.float64).cuda()
 
-    for i in range(n):
+    for i in tqdm(range(n)):
         fourth_power_distance_array[:, i] = torch.sum((data - data[i]).pow(2), dim=1).pow(2)  # vectorized fourth power distance of col(i)
         fourth_power_distance_array[i, i] = float('inf')  # distance between same point is infinity (convention used in this code)
 
     array_of_adjacency = torch.zeros((n, n), dtype=torch.int32).cuda()
     min_sum_of_distances = torch.empty(n, dtype=torch.float64).cuda()
 
-    for i in range(n - 1):  # No need to iterate the last row.
+    for i in tqdm(range(n - 1)):  # No need to iterate the last row.
         for j in range(i + 1, n):  # No need to iterate over j <= i
             min_sum_of_distances = torch.min(fourth_power_distance_array[i, :] + fourth_power_distance_array[j, :])
             if fourth_power_distance_array[i, j] <= min_sum_of_distances:
@@ -45,7 +45,9 @@ def GabrielGraph(X):
                 array_of_adjacency[i, j] = 1
                 array_of_adjacency[j, i] = 1
 
-    return array_of_adjacency.cpu().numpy()
+    # return array_of_adjacency.cpu().numpy()
+    edges = torch.nonzero(array_of_adjacency, as_tuple=False)
+    return edges.cpu().numpy()
 
 # data
 transform = transforms.Compose([
@@ -68,9 +70,13 @@ H = np.load('data/H_{}.npy'.format(label))
 Z = np.load('data/Z_{}.npy'.format(label))
 
 # gg
-sz = 1000
-print(sz)
-X = Z[np.random.choice(len(Z), size = sz), :]
-X = torch.tensor(X)
+# sz = 1000
+# print(sz)
+# X = Z[np.random.choice(len(Z), size = sz), :]
+# X = torch.tensor(X)
 # X = torch.tensor(H)
-adjacency = GabrielGraph(X)
+
+Z_gg = GabrielGraph(Z)
+np.save('data/Z_gg_{}.npy'.format(label), Z_gg)
+H_gg = GabrielGraph(H)
+np.save('data/H_gg_{}.npy'.format(label), H_gg)
